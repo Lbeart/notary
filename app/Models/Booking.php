@@ -14,6 +14,7 @@ class Booking extends Model
     'appointment_slot_id',
     'service_type_id',
     'description',
+    'selected_time',
 ];
   public function user()
     {

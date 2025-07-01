@@ -26,11 +26,20 @@ class BookingController extends Controller
     // Ruajtja e rezervimit
     public function store(Request $request)
     {
+        $exists = Booking::where('notary_id', $request->notary_id)
+    ->where('appointment_slot_id', $request->appointment_slot_id)
+    ->where('selected_time', $request->selected_time)
+    ->exists();
+
+if ($exists) {
+    return back()->withErrors(['selected_time' => 'Kjo orë është tashmë e rezervuar për këtë noter. Ju lutemi zgjidhni një orë tjetër.'])->withInput();
+}
        $request->validate([
         'notary_id' => 'required|exists:notaries,id',
         'appointment_slot_id' => 'required|exists:appointment_slots,id',
         'service_type_id' => 'required|exists:service_types,id',
         'description' => 'nullable|string',
+        'selected_time' => 'required|string'
     ]);
 
     $booking = Booking::create([
@@ -39,6 +48,7 @@ class BookingController extends Controller
         'appointment_slot_id' => $request->appointment_slot_id,
         'service_type_id' => $request->service_type_id,
         'description' => $request->description,
+         'selected_time' => $request->selected_time // e re
     ]);
    session(['booking_id' => $booking->id]);
     // Ngarko relacionet
@@ -60,7 +70,7 @@ class BookingController extends Controller
 
 public function exportPdf($id)
 {
-    $booking = Booking::with(['notary.user', 'serviceType', 'appointmentSlot'])->findOrFail($id);
+    $booking = Booking::with(['user', 'notary.user', 'serviceType', 'appointmentSlot'])->findOrFail($id);
 
     $pdf = Pdf::loadView('bookings.pdf', compact('booking'));
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="sq">
 <head>
     <meta charset="UTF-8">
@@ -14,9 +14,15 @@
     <div class="box">
         <strong>Emri i Klientit:</strong> {{ $booking->user->name }}<br>
         <strong>Email:</strong> {{ $booking->user->email }}<br>
-        <strong>Data:</strong> {{ $booking->appointmentSlot->date }}<br>
-        <strong>Ora:</strong> {{ $booking->appointmentSlot->start_time }} - {{ $booking->appointmentSlot->end_time }}<br>
+
+        {{-- Vetëm data, pa orë --}}
+        <strong>Data:</strong> {{ \Carbon\Carbon::parse($booking->appointmentSlot->date)->format('d-m-Y') }}<br>
+
+        {{-- Vetëm ora e zgjedhur --}}
+        <strong>Ora e zgjedhur:</strong> {{ \Carbon\Carbon::parse($booking->selected_time)->format('H:i') }}<br>
+
         <strong>Noteri:</strong> {{ $booking->notary->user->name }}<br>
+        <strong>Lloji i Shërbimit:</strong> {{ $booking->serviceType->name }}<br>
         <strong>Përshkrimi:</strong> {{ $booking->description ?? '---' }}
     </div>
 
