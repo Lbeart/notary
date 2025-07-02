@@ -13,5 +13,8 @@
     </main>
 
     @include('partials.footer')
+
+    {{-- VENDOSI KËTU NË FUND --}}
+    @stack('scripts')
 </body>
 </html>
