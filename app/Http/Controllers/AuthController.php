@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    
     public function showLogin()
     {
         return view('auth.login');
@@ -15,26 +16,49 @@ class AuthController extends Controller
 
     public function showRegister()
     {
-        return view('auth.register');
+            $cities = \App\Models\City::all();
+        return view('auth.register',compact('cities'));
     }
 
-    public function register(Request $request)
-    {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
-        ]);
+  public function register(Request $request)
+{
+    $request->validate([
+    'name' => 'required',
+    'email' => 'required|email|unique:users,email',
+    'password' => 'required|min:6',
+    'role' => 'required|in:user,notary',
+    'city_id' => 'required_if:role,notary|exists:cities,id',
+    'phone' => 'required_if:role,notary|unique:notaries,phone',
+    'address' => 'required_if:role,notary|string|max:255',
+], [
+    'email.unique' => 'Ky email është në përdorim.',
+    'phone.unique' => 'Ky numër telefoni është në përdorim.',
+    'city_id.required_if' => 'Qyteti është i detyrueshëm për noterët.',
+    'phone.required_if' => 'Telefoni është i detyrueshëm për noterët.',
+      'address.required_if' => 'Adresa është e detyrueshme për noterët.',
+]);
 
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'user',
-        ]);
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'role' => $request->role,
+         'phone' => $request->phone, // Marrim rolin nga forma
+    ]);
 
-        return redirect('/login')->with('success', 'U regjistruat me sukses');
+    // Nëse është noter, mundesh me kriju edhe një Notary record për të:
+    if ($request->role === 'notary') {
+        \App\Models\Notary::create([
+            'user_id' => $user->id,
+            'city_id' => $request->city_id,
+            'phone' => $request->phone,
+             'address' => $request->address,
+        ]);
     }
+
+    return redirect('/login')->with('success', 'U regjistruat me sukses');
+}
+
 
    public function login(Request $request)
 {

@@ -51,6 +51,12 @@ Route::middleware(['auth', 'notary'])->group(function () {
       Route::get('/notary/slots/create', [NotarySlotController::class, 'create'])->name('notary.slots.create');
     Route::post('/notary/slots', [NotarySlotController::class, 'store'])->name('notary.slots.store');
     Route::get('/notary/bookings/{id}/pdf', [NotaryBookingController::class, 'downloadPdf'])->name('notary.booking.pdf');
+   
+Route::get('/notary/slots/{id}/edit', [NotarySlotController::class, 'edit'])->name('notary.slots.edit');
+Route::put('/notary/slots/{id}', [NotarySlotController::class, 'update'])->name('notary.slots.update');
+
+
+Route::delete('/notary/slots/{id}', [NotarySlotController::class, 'destroy'])->name('notary.slots.destroy');
       // ... ekzistueset
     Route::get('/notary/bookings/monthly/{month?}', [NotaryBookingController::class, 'monthly'])->name('notary.bookings.monthly');
 });

@@ -15,6 +15,7 @@ class Booking extends Model
     'service_type_id',
     'description',
     'selected_time',
+    'document_path',
 ];
   public function user()
     {

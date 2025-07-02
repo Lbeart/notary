@@ -20,7 +20,7 @@
         </div>
     @endif
 
-    <form action="{{ route('bookings.store') }}" method="POST">
+    <form action="{{ route('bookings.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <input type="hidden" name="notary_id" value="{{ $notary->id }}">
 
@@ -29,12 +29,14 @@
             <select name="appointment_slot_id" id="appointment_slot_id" class="form-select" required>
                 <option value="">Zgjidh datën</option>
                 @foreach($slots as $slot)
-                    <option 
-                        value="{{ $slot->id }}" 
-                        data-start="{{ $slot->start_time }}" 
-                        data-end="{{ $slot->end_time }}">
-                        {{ $slot->date }}
-                    </option>
+                    @if(\Carbon\Carbon::parse($slot->date)->isToday() || \Carbon\Carbon::parse($slot->date)->isFuture())
+                        <option 
+                            value="{{ $slot->id }}" 
+                            data-start="{{ $slot->start_time }}" 
+                            data-end="{{ $slot->end_time }}">
+                            {{ \Carbon\Carbon::parse($slot->date)->format('d/m/Y') }}
+                        </option>
+                    @endif
                 @endforeach
             </select>
         </div>
@@ -43,7 +45,6 @@
             <label for="selected_time" class="form-label">Zgjidh orarin</label>
             <select name="selected_time" id="selected_time" class="form-select" required>
                 <option value="">Zgjidh orën</option>
-                {{-- Orët do të mbushen nga JavaScript --}}
             </select>
         </div>
 
@@ -60,6 +61,11 @@
         <div class="mb-3">
             <label for="description" class="form-label">Përshkrimi (opsionale)</label>
             <textarea name="description" id="description" rows="3" class="form-control"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="document" class="form-label">Ngarko dokumentin (opsionale)</label>
+            <input type="file" name="document" id="document" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
         </div>
 
         <button type="submit" class="btn btn-primary">Rezervo Takimin</button>
