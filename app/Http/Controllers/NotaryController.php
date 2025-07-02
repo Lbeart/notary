@@ -7,14 +7,26 @@ use Illuminate\Http\Request;
 
 class NotaryController extends Controller
 {
-
-    public function dashboard()
+public function dashboard()
 {
-    // Për shembull, ngarko informacionin që do ti shfaqësh noterit
     $notary = auth()->user()->notary;
 
-    $appointmentSlots = $notary ? $notary->appointmentSlots : collect();
-    $bookings = $notary ? $notary->bookings()->with(['user', 'appointmentSlot'])->get() : collect();
+    $today = \Carbon\Carbon::today();
+
+    // Orari i sotëm
+    $appointmentSlots = $notary->appointmentSlots()
+        ->whereDate('date', $today)
+        ->orderBy('date', 'asc')
+        ->get();
+
+    // Rezervimet e sotme
+    $bookings = \App\Models\Booking::with(['user', 'appointmentSlot'])
+        ->where('notary_id', $notary->id)
+        ->whereHas('appointmentSlot', function ($query) use ($today) {
+            $query->whereDate('date', $today);
+        })
+        ->orderBy('appointment_slot_id', 'asc')
+        ->get();
 
     return view('notaries.dashboard', compact('appointmentSlots', 'bookings'));
 }

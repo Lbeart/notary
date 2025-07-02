@@ -39,12 +39,19 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/notaries/{id}/edit', [AdminController::class, 'editNotary'])->name('notaries.edit');
     Route::put('/notaries/{id}', [AdminController::class, 'updateNotary'])->name('notaries.update');
     Route::delete('/notaries/{id}', [AdminController::class, 'destroyNotary'])->name('notaries.destroy');
+     Route::get('/bookings/monthly', [AdminController::class, 'monthlyBookingsSummary'])->name('bookings.monthly');
+       Route::get('/bookings/by-month', [AdminController::class, 'bookingsByMonth'])->name('bookings.byMonth');
+
 });
+
+
 
 Route::middleware(['auth', 'notary'])->group(function () {
     Route::get('/notary/dashboard', [NotaryController::class, 'dashboard'])->name('notary.dashboard');
       Route::get('/notary/slots/create', [NotarySlotController::class, 'create'])->name('notary.slots.create');
     Route::post('/notary/slots', [NotarySlotController::class, 'store'])->name('notary.slots.store');
     Route::get('/notary/bookings/{id}/pdf', [NotaryBookingController::class, 'downloadPdf'])->name('notary.booking.pdf');
+      // ... ekzistueset
+    Route::get('/notary/bookings/monthly/{month?}', [NotaryBookingController::class, 'monthly'])->name('notary.bookings.monthly');
 });
 

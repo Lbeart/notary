@@ -21,4 +21,22 @@ class NotaryBookingController extends Controller
 
         return $pdf->download('rezervimi-'.$booking->id.'.pdf');
     }
+  public function monthly(Request $request)
+{
+    $notaryId = auth()->user()->notary->id;
+
+    $month = $request->query('month', now()->month); // Merr nga query param apo default
+
+    $bookings = Booking::with(['user', 'appointmentSlot', 'serviceType'])
+        ->where('notary_id', $notaryId)
+        ->whereHas('appointmentSlot', function ($query) use ($month) {
+            $query->whereMonth('date', $month);
+        })
+        ->orderBy('appointment_slot_id')
+        ->get();
+
+    $monthName = \Carbon\Carbon::create()->month($month)->translatedFormat('F');
+
+    return view('notaries.monthly-bookings', compact('bookings', 'month', 'monthName'));
+}
 }

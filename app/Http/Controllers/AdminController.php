@@ -9,22 +9,29 @@ use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 class AdminController extends Controller
 {
 
     public function dashboard()
 {
-    return view('admin.dashboard', [
-        'totalBookings' => Booking::count(),
-        'totalNotaries' => Notary::count(),
-        'totalUsers' => User::where('role', 'user')->count(),
-        'latestBookings' => Booking::with(['user', 'notary.user', 'appointmentSlot', 'serviceType'])
-            ->latest()
-            ->take(5)
-            ->get(),
-    ]);
-}
-    // Lista e notarëve (Read)
+    $totalBookings = Booking::count();
+    $totalNotaries = \App\Models\Notary::count();
+    $totalUsers = \App\Models\User::where('role', 'user')->count();
+
+    $latestBookings = Booking::with(['user', 'notary.user', 'appointmentSlot', 'serviceType'])
+        ->orderByDesc('created_at')
+        ->take(10)
+        ->get();
+
+    return view('admin.dashboard', compact(
+        'totalBookings',
+        'totalNotaries',
+        'totalUsers',
+        'latestBookings'
+    ));
+}// Lista e notarëve (Read)
     public function listNotaries()
     {
         $notaries = Notary::with(['user', 'city', 'appointmentSlots'])->paginate(10);
@@ -127,7 +134,47 @@ class AdminController extends Controller
 
         return redirect()->route('admin.notaries.index')->with('success', 'Noteri u fshi me sukses.');
     }
+public function monthlyBookingsSummary()
+{
+    $monthlyData = Booking::selectRaw('
+            MONTH(appointment_slots.date) as month,
+            SUM(client_payments.amount) as total
+        ')
+        ->join('appointment_slots', 'appointment_slots.id', '=', 'bookings.appointment_slot_id')
+        ->join('client_payments', 'client_payments.booking_id', '=', 'bookings.id')
+        ->whereYear('appointment_slots.date', 2025)
+        ->groupBy('month')
+        ->get()
+        ->keyBy('month');
 
+    $months = collect(range(1, 12))->map(function ($month) use ($monthlyData) {
+        return [
+            'month' => $month,
+            'name' => \Carbon\Carbon::create()->month($month)->translatedFormat('F'),
+            'total' => number_format($monthlyData[$month]->total ?? 0, 2),
+        ];
+    });
 
-    
+    return view('admin.monthly-bookings', compact('months'));
+}
+   
+public function bookingsByMonth(Request $request)
+{
+    $month = $request->query('month');
+
+    if (!$month || $month < 1 || $month > 12) {
+        abort(404, 'Muaji nuk është valid.');
+    }
+
+    $bookings = Booking::with(['user', 'notary.user', 'appointmentSlot', 'serviceType'])
+        ->whereHas('appointmentSlot', function ($query) use ($month) {
+            $query->whereMonth('date', $month);
+        })
+        ->orderByDesc('created_at')
+        ->get();
+
+    $monthName = \Carbon\Carbon::create()->month($month)->translatedFormat('F');
+
+    return view('admin.bookings-by-month', compact('bookings', 'monthName', 'month'));
+}
 }
