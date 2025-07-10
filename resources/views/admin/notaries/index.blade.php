@@ -19,6 +19,7 @@
         <thead>
             <tr>
                 <th>Emri</th>
+                <th>Mbiemri</th>
                 <th>Email</th>
                 <th>Qyteti</th>
                 <th>Telefoni</th>
@@ -29,6 +30,7 @@
             @foreach($notaries as $notary)
                 <tr>
                     <td>{{ $notary->user->name }}</td>
+                    <td>{{ $notary->user->last_name }}</td>
                     <td>{{ $notary->user->email }}</td>
                     <td>{{ $notary->city->name }}</td>
                     <td>{{ $notary->phone }}</td>

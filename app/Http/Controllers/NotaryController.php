@@ -1,58 +1,93 @@
-<?php 
+<?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Notary;
 use App\Models\City;
+use App\Models\Booking;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
+use ZipArchive;
 
 class NotaryController extends Controller
 {
-public function dashboard()
-{
-    $notary = auth()->user()->notary;
+    public function dashboard(Request $request)
+    {
+        $notaryId = auth()->user()->notary->id;
+        $search = $request->query('search');
 
-    $today = \Carbon\Carbon::today();
+        $bookingsQuery = Booking::with(['user', 'serviceType'])
+            ->where('notary_id', $notaryId)
+            ->when($search, function ($query, $search) {
+                $query->whereHas('user', function ($q) use ($search) {
+                    $q->where('name', 'like', "%$search%")
+                      ->orWhere('last_name', 'like', "%$search%") // SHTUAR mbiemri
+                      ->orWhere('email', 'like', "%$search%");
+                });
+            })
+            ->whereDate('selected_time', now());
 
-    // Orari i sotëm
-    $appointmentSlots = $notary->appointmentSlots()
-        ->whereDate('date', $today)
-        ->orderBy('date', 'asc')
-        ->get();
+        $bookings = $bookingsQuery->get();
 
-    // Rezervimet e sotme
-    $bookings = \App\Models\Booking::with(['user', 'appointmentSlot'])
-        ->where('notary_id', $notary->id)
-        ->whereHas('appointmentSlot', function ($query) use ($today) {
-            $query->whereDate('date', $today);
-        })
-        ->orderBy('appointment_slot_id', 'asc')
-        ->get();
-
-    return view('notaries.dashboard', compact('appointmentSlots', 'bookings'));
-}
+        return view('notaries.dashboard', compact('bookings', 'search'));
+    }
 
     public function index(Request $request)
     {
-        // Merr të gjitha qytetet, veçanërisht unikët sipas emrit (nëse ka ndonjë dyfishim)
         $cities = City::all()->unique('name')->values();
 
-        // Merr noteret, me lidhjet e nevojshme user dhe city
-        // Nëse ka filtrim për qytet, filtro sipas city_id
         $notaries = Notary::with('user', 'city')
             ->when($request->city, function ($query, $cityId) {
                 $query->where('city_id', $cityId);
             })
             ->get();
 
-        // Kthe view me të dhënat
         return view('home', compact('notaries', 'cities'));
     }
 
     public function show($id)
     {
-        // Gjej noterin me user dhe city
         $notary = Notary::with('user', 'city')->findOrFail($id);
-
         return view('notaries.show', compact('notary'));
+    }
+
+    public function downloadDocuments($id)
+    {
+        $booking = Booking::with('notary.user', 'user')->findOrFail($id);
+
+        if (auth()->id() !== $booking->notary->user_id) {
+            abort(403);
+        }
+
+        $documentFields = array_filter($booking->getAttributes(), function ($value, $key) {
+            return str_ends_with($key, '_path') && $value;
+        }, ARRAY_FILTER_USE_BOTH);
+
+        if (empty($documentFields)) {
+            return back()->with('warning', 'Ky klient nuk ka ngarkuar dokumente.');
+        }
+
+        // Emri i klientit dhe data për emër të ZIP-it
+        $user = $booking->user;
+        $folderName = \Str::slug($user->name . '-' . $user->last_name) . '-' . now()->format('Ymd_His');
+        $zipFileName = 'documents-' . $folderName . '.zip';
+        $zipPath = storage_path('app/public/' . $zipFileName);
+
+        $zip = new ZipArchive();
+
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            foreach ($documentFields as $field => $path) {
+                $filePath = storage_path('app/public/' . $path);
+                if (file_exists($filePath)) {
+                    $filename = basename($path);
+                    $zip->addFile($filePath, $filename);
+                }
+            }
+            $zip->close();
+        } else {
+            return back()->with('error', 'Nuk u krijua dot arkivi ZIP.');
+        }
+
+        return response()->download($zipPath)->deleteFileAfterSend();
     }
 }

@@ -1,88 +1,103 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Notary;
+use App\Models\City;
+use Illuminate\Auth\Events\Registered;
 
 class AuthController extends Controller
 {
-    
     public function showLogin()
     {
-        return view('auth.login');
+        $cities = City::all();
+        return view('auth.login', compact('cities'));
     }
 
     public function showRegister()
     {
-            $cities = \App\Models\City::all();
-        return view('auth.register',compact('cities'));
+        $cities = City::all();
+        return view('auth.register', compact('cities'));
     }
 
-  public function register(Request $request)
-{
-    $request->validate([
-    'name' => 'required',
-    'email' => 'required|email|unique:users,email',
-    'password' => 'required|min:6',
-    'role' => 'required|in:user,notary',
-    'city_id' => 'required_if:role,notary|exists:cities,id',
-    'phone' => 'required_if:role,notary|unique:notaries,phone',
-    'address' => 'required_if:role,notary|string|max:255',
-], [
-    'email.unique' => 'Ky email është në përdorim.',
-    'phone.unique' => 'Ky numër telefoni është në përdorim.',
-    'city_id.required_if' => 'Qyteti është i detyrueshëm për noterët.',
-    'phone.required_if' => 'Telefoni është i detyrueshëm për noterët.',
-      'address.required_if' => 'Adresa është e detyrueshme për noterët.',
-]);
-
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'role' => $request->role,
-         'phone' => $request->phone, // Marrim rolin nga forma
-    ]);
-
-    // Nëse është noter, mundesh me kriju edhe një Notary record për të:
-    if ($request->role === 'notary') {
-        \App\Models\Notary::create([
-            'user_id' => $user->id,
-            'city_id' => $request->city_id,
-            'phone' => $request->phone,
-             'address' => $request->address,
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:6',
+            'role' => 'required|in:user,notary',
+            'phone' => 'required|string|max:20|unique:users,phone',
+            'city_id' => 'nullable|exists:cities,id',
+            'address' => 'nullable|string|max:255',
+        ], [
+            'email.unique' => 'Ky email është në përdorim.',
+            'phone.unique' => 'Ky numër telefoni është në përdorim.',
+            'last_name.required' => 'Mbiemri është i detyrueshëm.',
         ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'phone' => $request->phone,
+        ]);
+
+        if ($request->role === 'notary') {
+            if (!$request->city_id || !$request->address) {
+                return back()->withErrors(['city_id' => 'Qyteti dhe adresa janë të detyrueshme për noterët.'])->withInput();
+            }
+
+            Notary::create([
+                'user_id' => $user->id,
+                'city_id' => $request->city_id,
+                'phone' => $request->phone,
+                'address' => $request->address,
+            ]);
+        }
+
+        // ✅ Triggero eventin për email verifikim
+        event(new Registered($user));
+
+        return redirect('/login')->with('success', 'U regjistruat me sukses. Ju lutemi verifikoni emailin tuaj para se të hyni.');
     }
 
-    return redirect('/login')->with('success', 'U regjistruat me sukses');
-}
+    public function login(Request $request)
+    {
+        $credentials = $request->only('email', 'password');
 
-
-   public function login(Request $request)
-{
-
-      $credentials = $request->only('email', 'password');
-if (Auth::attempt($credentials)) {
+       if (Auth::attempt($credentials)) {
     $user = Auth::user();
 
+    // Kontrollo nëse nuk është admin dhe nuk e ka verifikuar email-in
+    if ($user->role !== 'admin' && !$user->hasVerifiedEmail()) {
+        Auth::logout();
+        return back()->withErrors(['email' => 'Ju lutem verifikoni email-in para se të hyni në sistem.']);
+    }
+
+    // Redirect bazuar në rolin e përdoruesit
     if ($user->role === 'admin') {
         return redirect()->route('admin.dashboard');
     } elseif ($user->role === 'notary') {
         return redirect()->route('notary.dashboard');
-    } else {
+    } elseif ($user->role === 'user') {
         return redirect()->route('home');
     }
-     return back()->withErrors(['email' => 'Kredencialet janë të pasakta']);
 }
 
-    return back()->withErrors(['email' => 'Kredencialet janë të pasakta']);
-}
+        return back()->withErrors(['email' => 'Kredencialet janë të pasakta']);
+    }
+
     public function logout()
     {
         Auth::logout();
         return redirect('/');
     }
 }
-

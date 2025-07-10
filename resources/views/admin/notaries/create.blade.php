@@ -25,13 +25,19 @@
         </div>
 
         <div class="mb-3">
+            <label>Mbiemri</label>
+            <input type="text" name="last_name" class="form-control" value="{{ old('last_name') }}" required>
+        </div>
+
+        <div class="mb-3">
             <label>Email</label>
             <input type="email" name="email" class="form-control" value="{{ old('email') }}" required>
         </div>
+
         <div class="mb-3">
-    <label>Password</label>
-    <input type="password" name="password" class="form-control" required>
-</div>
+            <label>Password</label>
+            <input type="password" name="password" class="form-control" required>
+        </div>
 
         <div class="mb-3">
             <label>Qyteti</label>
@@ -54,8 +60,6 @@
             <label>Adresa</label>
             <input type="text" name="address" class="form-control" value="{{ old('address') }}" required>
         </div>
-
-        <!-- Për slots mund të shtosh UI me JS ose form shtesë, ose thjesht një textarea JSON -->
 
         <button type="submit" class="btn btn-primary">Ruaj</button>
     </form>

@@ -32,6 +32,7 @@
                             <a href="{{ route('bookings.exportPdf', $booking->id) }}" class="btn btn-sm btn-outline-primary">
                                 Shkarko PDF
                             </a>
+                            
                         </td>
                     </tr>
                 @empty

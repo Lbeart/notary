@@ -24,6 +24,12 @@
         <strong>Noteri:</strong> {{ $booking->notary->user->name }}<br>
         <strong>Lloji i Shërbimit:</strong> {{ $booking->serviceType->name }}<br>
         <strong>Përshkrimi:</strong> {{ $booking->description ?? '---' }}
+        @if ($signatureUrl)
+    <div style="margin-top: 20px;">
+        <strong>Nënshkrimi i Noterit:</strong><br>
+        <img src="{{ $signatureUrl }}" alt="Nënshkrimi" style="width: 200px; height: auto;">
+    </div>
+@endif
     </div>
 
     <p style="margin-top: 30px;">Faleminderit për përdorimin e platformës Notary Appointment System.</p>

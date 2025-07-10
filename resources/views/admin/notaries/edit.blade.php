@@ -26,6 +26,11 @@
         </div>
 
         <div class="mb-3">
+            <label>Mbiemri</label>
+            <input type="text" name="last_name" class="form-control" value="{{ old('last_name', $notary->user->last_name) }}" required>
+        </div>
+
+        <div class="mb-3">
             <label>Email</label>
             <input type="email" name="email" class="form-control" value="{{ old('email', $notary->user->email) }}" required>
         </div>
@@ -56,8 +61,6 @@
             <label>Adresa</label>
             <input type="text" name="address" class="form-control" value="{{ old('address', $notary->address) }}" required>
         </div>
-
-        <!-- Nëse ke slots, mund t'i shtosh këtu sipas UI që ke ose textarea për JSON -->
 
         <button type="submit" class="btn btn-primary">Ruaj Ndryshimet</button>
         <a href="{{ route('admin.notaries.index') }}" class="btn btn-secondary ms-2">Anulo</a>

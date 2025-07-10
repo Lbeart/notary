@@ -8,4 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ServiceType extends Model
 {
     use HasFactory;
+
+    // Kjo është ajo që mungon te ti:
+    protected $fillable = ['name'];
 }

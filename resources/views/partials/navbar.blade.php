@@ -7,7 +7,14 @@
           <li class="nav-item"><a class="nav-link" href="#">Hi, {{ auth()->user()->name }}</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ route('logout') }}">Logout</a></li>
         @else
-          <li class="nav-item"><a class="nav-link" href="{{ route('login') }}">Login</a></li>
+         <li class="nav-item">
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit" class="nav-link btn btn-link" style="display: inline; padding: 0; margin: 0; border: none; background: none;">
+            Dil
+        </button>
+    </form>
+</li>
           <li class="nav-item"><a class="nav-link" href="{{ route('register') }}">Register</a></li>
         @endauth
       </ul>

@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail; // <--- Kjo është importi
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail // <--- Kjo është implementimi
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -17,12 +17,7 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-    ];
+    protected $fillable = ['name', 'last_name', 'email', 'password', 'role', 'phone'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -42,12 +37,14 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
     public function ratings()
-{
-    return $this->hasMany(Rating::class);
-}
-public function notary()
-{
-    return $this->hasOne(Notary::class);
-}
+    {
+        return $this->hasMany(Rating::class);
+    }
+
+    public function notary()
+    {
+        return $this->hasOne(Notary::class);
+    }
 }

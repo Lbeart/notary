@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Notary;
 use App\Models\User;
 use App\Models\City;
-use App\Models\AppointmentSlot;
 use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -21,7 +20,7 @@ class AdminController extends Controller
         $totalNotaries = Notary::count();
         $totalUsers = User::where('role', 'user')->count();
 
-        $latestBookings = Booking::with(['user', 'notary.user', 'appointmentSlot', 'serviceType'])
+        $latestBookings = Booking::with(['user', 'notary.user', 'serviceType'])
             ->orderByDesc('created_at')
             ->take(10)
             ->get();
@@ -52,7 +51,7 @@ class AdminController extends Controller
 
     public function listNotaries()
     {
-        $notaries = Notary::with(['user', 'city', 'appointmentSlots'])->paginate(10);
+        $notaries = Notary::with(['user', 'city'])->paginate(10);
         return view('admin.notaries.index', compact('notaries'));
     }
 
@@ -66,6 +65,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'name' => 'required|string',
+            'last_name' => 'required|string',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'city_id' => 'required|exists:cities,id',
@@ -75,17 +75,16 @@ class AdminController extends Controller
 
         $user = User::create([
             'name' => $request->name,
+            'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'notary',
+            'phone' => $request->phone,
         ]);
-
-        \Log::info('Notary user created', ['id' => $user->id, 'role' => $user->role]);
 
         $notary = Notary::create([
             'user_id' => $user->id,
             'city_id' => $request->city_id,
-            'phone' => $request->phone,
             'address' => $request->address,
         ]);
 
@@ -94,7 +93,7 @@ class AdminController extends Controller
 
     public function editNotary($id)
     {
-        $notary = Notary::with('user', 'appointmentSlots')->findOrFail($id);
+        $notary = Notary::with('user')->findOrFail($id);
         $cities = City::all();
         return view('admin.notaries.edit', compact('notary', 'cities'));
     }
@@ -105,6 +104,7 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'required|string',
+            'last_name' => 'required|string',
             'email' => "required|email|unique:users,email,{$notary->user->id}",
             'city_id' => 'required|exists:cities,id',
             'phone' => 'required|string',
@@ -113,13 +113,15 @@ class AdminController extends Controller
 
         $notary->user->update([
             'name' => $request->name,
+            'last_name' => $request->last_name,
             'email' => $request->email,
+            'phone' => $request->phone,
         ]);
 
         $notary->update([
             'city_id' => $request->city_id,
-            'phone' => $request->phone,
             'address' => $request->address,
+             'phone' => $request->phone, // te Notary
         ]);
 
         return redirect()->route('admin.notaries.index')->with('success', 'Noteri u përditësua me sukses.');
@@ -138,45 +140,57 @@ class AdminController extends Controller
 
     public function monthlyBookingsSummary()
     {
-        $monthlyData = Booking::selectRaw('
-                MONTH(appointment_slots.date) as month,
-                SUM(client_payments.amount) as total
-            ')
-            ->join('appointment_slots', 'appointment_slots.id', '=', 'bookings.appointment_slot_id')
-            ->join('client_payments', 'client_payments.booking_id', '=', 'bookings.id')
-            ->whereYear('appointment_slots.date', 2025)
-            ->groupBy('month')
-            ->get()
-            ->keyBy('month');
-
-        $months = collect(range(1, 12))->map(function ($month) use ($monthlyData) {
-            return [
-                'month' => $month,
-                'name' => \Carbon\Carbon::create()->month($month)->translatedFormat('F'),
-                'total' => number_format($monthlyData[$month]->total ?? 0, 2),
-            ];
-        });
-
-        return view('admin.monthly-bookings', compact('months'));
+        return view('admin.monthly-bookings', ['months' => []]); // placeholder, sepse nuk ka më appointment_slot
     }
 
     public function bookingsByMonth(Request $request)
     {
-        $month = $request->query('month');
-
-        if (!$month || $month < 1 || $month > 12) {
-            abort(404, 'Muaji nuk është valid.');
-        }
-
-        $bookings = Booking::with(['user', 'notary.user', 'appointmentSlot', 'serviceType'])
-            ->whereHas('appointmentSlot', function ($query) use ($month) {
-                $query->whereMonth('date', $month);
-            })
-            ->orderByDesc('created_at')
-            ->get();
-
-        $monthName = \Carbon\Carbon::create()->month($month)->translatedFormat('F');
-
-        return view('admin.bookings-by-month', compact('bookings', 'monthName', 'month'));
+        abort(404, 'Kjo veçori është hequr.');
     }
+    public function listUsers()
+{
+    $users = User::where('role', 'user')->latest()->get();
+    return view('admin.users.index', compact('users'));
+}
+public function editUser($id)
+{
+    $user = User::findOrFail($id);
+    return view('admin.users.edit', compact('user'));
+}
+
+public function updateUser(Request $request, $id)
+{
+    $user = User::findOrFail($id);
+
+    $request->validate([
+        'name' => 'required|string',
+        'last_name' => 'required|string',
+        'email' => "required|email|unique:users,email,{$id}",
+        'phone' => 'nullable|string',
+        'password' => 'nullable|min:6', // fjalëkalimi opsional
+    ]);
+
+    $data = [
+        'name' => $request->name,
+        'last_name' => $request->last_name,
+        'email' => $request->email,
+        'phone' => $request->phone,
+    ];
+
+    if ($request->filled('password')) {
+        $data['password'] = \Hash::make($request->password);
+    }
+
+    $user->update($data);
+
+    return redirect()->route('admin.users.index')->with('success', 'Përdoruesi u përditësua me sukses.');
+}
+
+public function destroyUser($id)
+{
+    $user = User::findOrFail($id);
+    $user->delete();
+
+    return redirect()->route('admin.users.index')->with('success', 'Përdoruesi u fshi me sukses.');
+}
 }

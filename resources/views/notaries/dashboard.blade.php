@@ -1,65 +1,123 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboardi i Noterit</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 20px;
+            padding: 40px 20px;
+        }
+        .sidebar {
+            background-color: #001f3f;
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            height: 100%;
+        }
+        .sidebar h4 {
+            margin-bottom: 15px;
+        }
+        .sidebar a, .sidebar form button {
+            display: block;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            background: none;
+            border: none;
+            text-align: left;
+        }
+        .sidebar a:hover, .sidebar a.active, .sidebar form button:hover {
+            background-color: #0074cc;
+        }
+        .main-content {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .booking-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
 
-@section('title', 'Dashboardi i Noterit')
-
-@section('content')
-<div class="container mt-4">
-    <h1>Mirësevini, {{ auth()->user()->name }}</h1>
-
-    <div class="d-flex flex-wrap gap-2 my-4">
-        <a href="{{ route('notary.slots.create') }}" class="btn btn-success">➕ Shto Orar të Lirë</a>
-        <a href="{{ route('notary.bookings.monthly') }}" class="btn btn-info text-white">📊 Rezervimet Mujore</a>
+<div class="dashboard-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h4>📋 Menu</h4>
+        <a href="{{ route('notary.dashboard') }}" class="active">Rezervimet për Sot</a>
+        <a href="{{ route('notary.booking.monthly') }}">📊 Rezervimet Mujore</a>
+        <form action="{{ route('logout') }}" method="POST">
+            @csrf
+            <button type="submit">🚪 Dil</button>
+        </form>
     </div>
 
-    <h3 class="mt-5">📅 Orari i punës për sot ({{ \Carbon\Carbon::today()->format('d/m/Y') }})</h3>
-    @if ($appointmentSlots->isEmpty())
-        <div class="alert alert-warning">
-            ⛔ Nuk ke orar të caktuar për sot. <a href="{{ route('notary.slots.create') }}">Shto orarin e sotëm</a> për të pranuar rezervime.
-        </div>
-    @else
-        <ul class="list-group mb-4">
-            @foreach ($appointmentSlots as $slot)
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        {{ $slot->date }} – {{ $slot->start_time }} deri {{ $slot->end_time }}
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('notary.slots.edit', $slot->id) }}" class="btn btn-sm btn-warning">Edito</a>
-                        <form action="{{ route('notary.slots.destroy', $slot->id) }}" method="POST" onsubmit="return confirm('A jeni i sigurt që dëshironi ta fshini këtë orar?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger">Fshi</button>
-                        </form>
-                    </div>
-                </li>
-            @endforeach
-        </ul>
-    @endif
+    <!-- Main Content -->
+    <div class="main-content">
+        <h2 class="mb-4">📅 Rezervimet për sot ({{ \Carbon\Carbon::today()->format('d/m/Y') }})</h2>
 
-    <h3 class="mt-5">✅ Rezervimet e tua për sot ({{ \Carbon\Carbon::today()->format('d/m/Y') }})</h3>
-    @if ($bookings->isEmpty())
-        <p class="text-muted">Sot nuk ke asnjë rezervim.</p>
-    @else
-        <ul class="list-group">
+        <!-- Kërkimi -->
+        <form method="GET" action="{{ route('notary.dashboard') }}" class="mb-4">
+            <div class="input-group">
+                <input type="text" name="search" class="form-control" placeholder="🔍 Kërko klientin (emër, mbiemër, email, telefon)..."
+                       value="{{ request('search') }}">
+                <button class="btn btn-primary" type="submit">Kërko</button>
+                @if(request('search'))
+                    <a href="{{ route('notary.dashboard') }}" class="btn btn-outline-secondary">✖ Fshi</a>
+                @endif
+            </div>
+        </form>
+
+        @if ($bookings->isEmpty())
+            <p class="text-muted">Sot nuk ke asnjë rezervim.</p>
+        @else
             @foreach ($bookings as $booking)
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <div class="flex-grow-1">
-                        <strong>{{ $booking->user->name }}</strong> ka rezervuar për orën {{ $booking->selected_time }}
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('notary.booking.pdf', $booking->id) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">
-                            Shkarko PDF
-                        </a>
+                <div class="booking-card">
+                    <strong>👤 Emri:</strong> {{ $booking->user->name }}<br>
+                    <strong>👤 Mbiemri:</strong> {{ $booking->user->last_name }}<br>
+                    <strong>📧 Email:</strong> {{ $booking->user->email }}<br>
+                    <strong>📞 Telefoni:</strong> {{ $booking->user->phone }}<br>
+                    <strong>🕒 Ora:</strong> {{ $booking->selected_time }}<br>
+                    <strong>📝 Shërimi:</strong> {{ $booking->serviceType->name }}<br>
 
-                        @if ($booking->document_path)
-                            <a href="{{ asset('storage/' . $booking->document_path) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                Shiko Dokumentin
-                            </a>
+                    @php
+                        $documentFields = array_filter($booking->getAttributes(), function ($value, $key) {
+                            return str_ends_with($key, '_path') && $value;
+                        }, ARRAY_FILTER_USE_BOTH);
+                    @endphp
+
+                    @foreach ($documentFields as $field => $path)
+                        <div class="mt-2">
+                            📄 {{ ucfirst(str_replace('_', ' ', str_replace('_path', '', $field))) }}:
+                            <a href="{{ asset('storage/' . $path) }}" target="_blank" class="btn btn-sm btn-outline-secondary">Shiko</a>
+                        </div>
+                    @endforeach
+
+                    <div class="mt-3 d-flex gap-2">
+                        <a href="{{ route('notary.booking.pdf', $booking->id) }}" target="_blank" class="btn btn-sm btn-outline-primary">📄 PDF</a>
+                        @if (count($documentFields))
+                            <a href="{{ route('notary.booking.downloadDocuments', $booking->id) }}" class="btn btn-sm btn-outline-success">📦 Dokumentet</a>
                         @endif
                     </div>
-                </li>
+                </div>
             @endforeach
-        </ul>
-    @endif
+        @endif
+    </div>
 </div>
-@endsection
+
+</body>
+</html>
